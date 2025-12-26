@@ -235,6 +235,24 @@ end
 
 -- Commands
 
+-- Helper to get current paragraph or selection
+local function get_code_context()
+  -- Save current position
+  local save_cursor = vim.fn.getcurpos()
+
+  -- Select current paragraph
+  vim.cmd("normal! vip")
+
+  local start_line = vim.fn.line("'<")
+  local end_line = vim.fn.line("'>")
+  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+
+  -- Restore cursor position
+  vim.fn.setpos('.', save_cursor)
+
+  return table.concat(lines, "\n")
+end
+
 function M.ask()
   vim.ui.input({ prompt = "Ask BenchAI: " }, function(input)
     if not input or input == "" then return end
@@ -270,6 +288,23 @@ function M.explain_selection()
   )
 end
 
+function M.explain()
+  local code = get_code_context()
+  if code == "" then
+    vim.notify("No code found", vim.log.levels.WARN)
+    return
+  end
+
+  show_loading("Analyzing code...")
+
+  call_benchai(
+    "Explain this code clearly. Include what it does, how it works, and any important patterns.",
+    code,
+    function(response) show_response(response, false) end,
+    function(error) show_response(error, true) end
+  )
+end
+
 function M.improve_selection()
   local start_line = vim.fn.line("'<")
   local end_line = vim.fn.line("'>")
@@ -278,6 +313,23 @@ function M.improve_selection()
 
   if code == "" then
     vim.notify("No code selected", vim.log.levels.WARN)
+    return
+  end
+
+  show_loading("Improving code...")
+
+  call_benchai(
+    "Suggest improvements for this code. Focus on best practices, performance, and readability. Provide the improved code.",
+    code,
+    function(response) show_response(response, false) end,
+    function(error) show_response(error, true) end
+  )
+end
+
+function M.improve()
+  local code = get_code_context()
+  if code == "" then
+    vim.notify("No code found", vim.log.levels.WARN)
     return
   end
 
@@ -312,6 +364,23 @@ function M.fix_bugs()
   )
 end
 
+function M.fix()
+  local code = get_code_context()
+  if code == "" then
+    vim.notify("No code found", vim.log.levels.WARN)
+    return
+  end
+
+  show_loading("Finding bugs...")
+
+  call_benchai(
+    "Analyze this code for bugs and issues. Explain the problems and provide fixed code.",
+    code,
+    function(response) show_response(response, false) end,
+    function(error) show_response(error, true) end
+  )
+end
+
 function M.generate_tests()
   local start_line = vim.fn.line("'<")
   local end_line = vim.fn.line("'>")
@@ -320,6 +389,23 @@ function M.generate_tests()
 
   if code == "" then
     vim.notify("No code selected", vim.log.levels.WARN)
+    return
+  end
+
+  show_loading("Generating tests...")
+
+  call_benchai(
+    "Write comprehensive unit tests for this code. Include edge cases and use appropriate testing framework.",
+    code,
+    function(response) show_response(response, false) end,
+    function(error) show_response(error, true) end
+  )
+end
+
+function M.tests()
+  local code = get_code_context()
+  if code == "" then
+    vim.notify("No code found", vim.log.levels.WARN)
     return
   end
 
@@ -342,14 +428,20 @@ function M.setup()
   vim.api.nvim_create_user_command("BenchAIFix", M.fix_bugs, { range = true })
   vim.api.nvim_create_user_command("BenchAITest", M.generate_tests, { range = true })
 
-  -- Keymaps
+  -- Keymaps (normal mode - works on current paragraph)
   vim.keymap.set("n", "<leader>aa", M.ask, { desc = "Ask BenchAI", silent = true })
-  vim.keymap.set("v", "<leader>ae", ":<C-u>BenchAIExplain<CR>", { desc = "Explain Code", silent = true })
-  vim.keymap.set("v", "<leader>ar", ":<C-u>BenchAIImprove<CR>", { desc = "Improve Code", silent = true })
-  vim.keymap.set("v", "<leader>af", ":<C-u>BenchAIFix<CR>", { desc = "Fix Bugs", silent = true })
-  vim.keymap.set("v", "<leader>at", ":<C-u>BenchAITest<CR>", { desc = "Generate Tests", silent = true })
+  vim.keymap.set("n", "<leader>ae", M.explain, { desc = "Explain Code", silent = true })
+  vim.keymap.set("n", "<leader>ar", M.improve, { desc = "Improve Code", silent = true })
+  vim.keymap.set("n", "<leader>af", M.fix, { desc = "Fix Bugs", silent = true })
+  vim.keymap.set("n", "<leader>at", M.tests, { desc = "Generate Tests", silent = true })
 
-  vim.notify("BenchAI ready - <leader>aa to start", vim.log.levels.INFO)
+  -- Keymaps (visual mode - works on selection)
+  vim.keymap.set("v", "<leader>ae", ":<C-u>BenchAIExplain<CR>", { desc = "Explain Selection", silent = true })
+  vim.keymap.set("v", "<leader>ar", ":<C-u>BenchAIImprove<CR>", { desc = "Improve Selection", silent = true })
+  vim.keymap.set("v", "<leader>af", ":<C-u>BenchAIFix<CR>", { desc = "Fix Selection", silent = true })
+  vim.keymap.set("v", "<leader>at", ":<C-u>BenchAITest<CR>", { desc = "Test Selection", silent = true })
+
+  vim.notify("BenchAI ready - <leader>a* for commands", vim.log.levels.INFO)
 end
 
 -- Plugin definition for lazy.nvim
