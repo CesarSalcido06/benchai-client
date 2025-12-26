@@ -8,14 +8,14 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BENCHAI_URL="${BENCHAI_URL:-http://192.168.0.213:8085}"
-NVIM_PLUGIN="${NVIM_PLUGIN:-neoai}"  # Options: neoai (default), avante
+NVIM_PLUGIN="${NVIM_PLUGIN:-simple}"  # Options: simple (default), neoai, avante
 
 echo "================================"
 echo "  BenchAI Client Installer"
 echo "================================"
 echo ""
 echo "Server URL: $BENCHAI_URL"
-echo "Neovim Plugin: $NVIM_PLUGIN (set NVIM_PLUGIN=avante to use Avante instead)"
+echo "Neovim Plugin: $NVIM_PLUGIN"
 echo ""
 
 # Detect OS
@@ -156,34 +156,42 @@ configure_neovim() {
 
         # Choose plugin based on NVIM_PLUGIN env var
         if [[ "$NVIM_PLUGIN" == "avante" ]]; then
-            echo "Installing Avante.nvim (legacy)..."
+            echo "Installing Avante.nvim (legacy - may have issues)..."
             SOURCE_FILE="$SCRIPT_DIR/configs/benchai.lua"
-        else
-            echo "Installing NeoAI.nvim (recommended)..."
+        elif [[ "$NVIM_PLUGIN" == "neoai" ]]; then
+            echo "Installing NeoAI.nvim..."
             SOURCE_FILE="$SCRIPT_DIR/configs/benchai-neoai.lua"
+        else
+            echo "Installing BenchAI Simple (recommended - no dependencies)..."
+            SOURCE_FILE="$SCRIPT_DIR/configs/benchai-simple.lua"
         fi
 
         # Copy config and replace URL
         sed "s|http://192.168.0.213:8085|${BENCHAI_URL}|g" "$SOURCE_FILE" > "$NVIM_PLUGIN_DIR/benchai.lua"
 
         echo "Neovim plugin installed to $NVIM_PLUGIN_DIR/benchai.lua"
-        echo "Run :Lazy sync in Neovim to install dependencies"
+
+        if [[ "$NVIM_PLUGIN" == "simple" ]] || [[ "$NVIM_PLUGIN" == "" ]]; then
+            echo "No plugin dependencies - just restart Neovim!"
+        else
+            echo "Run :Lazy sync in Neovim to install dependencies"
+        fi
         echo ""
         echo "Keybindings:"
         if [[ "$NVIM_PLUGIN" == "avante" ]]; then
             echo "  <leader>aa - Toggle AI chat sidebar"
             echo "  Select code + ga - Add selection to chat"
         else
-            echo "  <leader>aa - Toggle BenchAI chat"
-            echo "  <leader>ac - Chat with context"
-            echo "  <leader>ag - Generate git commit message"
-            echo "  (Visual) <leader>ae - Explain selected code"
-            echo "  (Visual) <leader>ar - Improve/refactor code"
-            echo "  (Visual) <leader>af - Find and fix bugs"
+            echo "  <leader>aa - Ask BenchAI (input prompt)"
+            echo "  <leader>ae - Explain code"
+            echo "  <leader>ar - Improve/refactor code"
+            echo "  <leader>af - Find and fix bugs"
+            echo "  <leader>at - Generate tests"
+            echo "  (Works in normal mode on paragraph, visual mode on selection)"
         fi
     else
         echo "Neovim config not found, skipping..."
-        echo "To install later, copy configs/benchai-neoai.lua to ~/.config/nvim/lua/plugins/benchai.lua"
+        echo "To install later, copy configs/benchai-simple.lua to ~/.config/nvim/lua/plugins/benchai.lua"
     fi
 }
 
@@ -251,17 +259,21 @@ echo "VS Code: Press Cmd+L (Mac) or Ctrl+L to open Continue chat"
 echo ""
 if [[ "$NVIM_PLUGIN" == "avante" ]]; then
     echo "Neovim (Avante): Run :Lazy sync, then use <leader>aa"
-else
+elif [[ "$NVIM_PLUGIN" == "neoai" ]]; then
     echo "Neovim (NeoAI): Run :Lazy sync, then use <leader>aa"
+else
+    echo "Neovim (BenchAI Simple): Just restart Neovim!"
     echo "  Keybindings:"
-    echo "    <leader>aa - Toggle chat"
-    echo "    <leader>ac - Chat with context"
-    echo "    <leader>ae - Explain code (visual mode)"
-    echo "    <leader>ar - Refactor code (visual mode)"
+    echo "    <leader>aa - Ask BenchAI"
+    echo "    <leader>ae - Explain code"
+    echo "    <leader>ar - Improve code"
+    echo "    <leader>af - Fix bugs"
+    echo "    <leader>at - Generate tests"
 fi
 echo ""
 echo "IMPORTANT: Restart your terminal or run: source $SHELL_RC"
 echo ""
 echo "To switch Neovim plugin:"
-echo "  NVIM_PLUGIN=avante ./install.sh  # Use Avante (legacy)"
-echo "  NVIM_PLUGIN=neoai ./install.sh   # Use NeoAI (recommended)"
+echo "  ./install.sh                     # BenchAI Simple (default, no deps)"
+echo "  NVIM_PLUGIN=neoai ./install.sh   # NeoAI (requires plugin install)"
+echo "  NVIM_PLUGIN=avante ./install.sh  # Avante (legacy, may have issues)"
