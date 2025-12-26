@@ -121,4 +121,37 @@ Running Phi-3 and Qwen2.5 on CPU as fallback.
 
 ---
 
-**Status:** ✅ RESOLVED
+## Permanent Fix Applied (Dec 25, 2024)
+
+Router updated with automatic model management:
+
+### Changes Made (`benchai/router/llm_router.py`)
+1. **Auto-start core models on boot** - `ensure_core_models()` runs at startup
+2. **Health monitoring loop** - Checks every 60s, auto-restarts crashed models
+3. **Optimized GPU/CPU allocation**:
+   - `general`, `planner`, `research` → Always CPU (guaranteed availability)
+   - `code` → GPU preferred (best performance)
+   - `vision` → GPU required (on-demand)
+4. **Core models protected** - Never auto-unloaded due to idle timeout
+
+### Verification
+```bash
+# Router now shows on startup:
+[STARTUP] Ensuring core models are running...
+[STARTUP] general started successfully
+[STARTUP] planner started successfully
+[STARTUP] code started successfully
+[BENCHAI] Core models: ['general', 'planner', 'code']
+[BENCHAI] Health check interval: 60s
+```
+
+### To Apply Fix
+```bash
+cd ~/benchai
+git pull origin master
+# Router will auto-start models on next restart
+```
+
+---
+
+**Status:** ✅ PERMANENTLY FIXED
