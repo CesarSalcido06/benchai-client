@@ -46,7 +46,9 @@ return {
           {
             name = "openai",
             model = "auto",
-            params = nil,
+            params = {
+              url = "http://192.168.0.213:8085/v1/chat/completions",
+            },
           },
         },
 
