@@ -12,7 +12,17 @@ cd benchai-client
 Installs:
 - **CLI tool** - `benchai` command with streaming support
 - **VS Code** - Continue.dev configuration
-- **Neovim** - Avante.nvim plugin setup
+- **Neovim** - NeoAI.nvim plugin (recommended) or Avante.nvim (legacy)
+
+### Neovim Plugin Options
+
+```bash
+# Default: NeoAI (recommended - more reliable)
+./install.sh
+
+# Legacy: Avante (may have issues with custom endpoints)
+NVIM_PLUGIN=avante ./install.sh
+```
 
 ## Requirements
 
@@ -101,24 +111,50 @@ When in `benchai -i`:
 - BenchAI Code (optimized for coding)
 - BenchAI Research (for analysis)
 
-## Neovim (Avante.nvim)
+## Neovim (NeoAI - Recommended)
+
+NeoAI is the default plugin - more reliable with custom OpenAI-compatible endpoints.
 
 ### Setup
 1. Config installed to `~/.config/nvim/lua/plugins/benchai.lua`
 2. Run `:Lazy sync` to install dependencies
 3. Restart Neovim
 
-### Keybindings
+### NeoAI Keybindings
+| Key | Mode | Action |
+|-----|------|--------|
+| `<leader>aa` | Normal | Toggle BenchAI chat |
+| `<leader>aa` | Visual | Chat with selected code |
+| `<leader>ac` | Normal | Chat with context |
+| `<leader>ag` | Normal | Generate git commit message |
+| `<leader>ae` | Visual | Explain selected code |
+| `<leader>ar` | Visual | Improve/refactor code |
+| `<leader>af` | Visual | Find and fix bugs |
+| `<leader>at` | Visual | Generate tests |
+| `<leader>ad` | Visual | Generate documentation |
+
+### Commands
+```vim
+:NeoAI                 " Open chat
+:NeoAIToggle           " Toggle chat window
+:NeoAIContext          " Chat with context
+:NeoAIInject explain   " Explain selection
+:NeoAIInject improve   " Improve selection
+```
+
+## Neovim (Avante - Legacy)
+
+If you prefer Avante, install with `NVIM_PLUGIN=avante ./install.sh`
+
+### Avante Keybindings
 | Key | Action |
 |-----|--------|
 | `<leader>aa` | Toggle AI chat sidebar |
 | `ga` (visual mode) | Add selection to chat |
 | `<CR>` | Submit message (normal mode) |
 | `<C-s>` | Submit message (insert mode) |
-| `co` | Accept "ours" in diff |
-| `ct` | Accept "theirs" in diff |
-| `]]` | Jump to next change |
-| `[[` | Jump to previous change |
+
+**Note**: Avante may have issues with custom endpoints (hanging, infinite generation)
 
 ## Models
 
@@ -166,6 +202,15 @@ source ~/.zshrc
 4. Check Output → Continue for errors
 
 ### Neovim plugin not loading
+
+**NeoAI:**
+```vim
+:Lazy sync
+:Lazy log
+:NeoAI        " Should open chat window
+```
+
+**Avante (if using legacy):**
 ```vim
 :checkhealth avante
 :Lazy sync
@@ -175,6 +220,20 @@ source ~/.zshrc
 **Requirements:**
 - LazyVim or lazy.nvim plugin manager
 - Neovim 0.9+
+
+### Neovim stuck generating (Avante only)
+
+If Avante hangs or generates infinitely:
+
+1. **Switch to NeoAI (recommended):**
+   ```bash
+   NVIM_PLUGIN=neoai ./install.sh
+   ```
+
+2. **Or try these Avante fixes:**
+   - Clear cache: `rm -rf ~/.local/share/nvim/avante ~/.cache/nvim/avante`
+   - Use fixed config: `cp configs/benchai-fixed.lua ~/.config/nvim/lua/plugins/benchai.lua`
+   - See [NVIM-HOTFIX.md](NVIM-HOTFIX.md) for details
 
 ## Installed Files
 
