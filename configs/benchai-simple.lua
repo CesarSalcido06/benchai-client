@@ -146,17 +146,17 @@ end
 -- Make API call
 local function call_benchai(prompt, context, on_success, on_error)
   local messages = {}
+  local content = ""
 
   if context and context ~= "" then
-    table.insert(messages, {
-      role = "user",
-      content = "Here is code for context:\n\n```\n" .. context .. "\n```\n"
-    })
+    content = "Here is code for context:\n\n```\n" .. context .. "\n```\n\n" .. prompt
+  else
+    content = prompt
   end
 
   table.insert(messages, {
     role = "user",
-    content = prompt
+    content = content
   })
 
   local payload = vim.fn.json_encode({
