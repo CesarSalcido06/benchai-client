@@ -82,4 +82,43 @@ Add health monitoring and auto-restart for model backends to prevent this from h
 
 ---
 
-**Status:** Waiting for homeserver fix
+## Resolution (Dec 25, 2024)
+
+### Root Cause
+Phi-3 Mini server (port 8091) was not running. GPU memory was exhausted by other models.
+
+### Fix Applied
+Started Phi-3 on CPU mode (no GPU layers):
+```bash
+/home/user/llama.cpp/build/bin/llama-server \
+  -m /home/user/llama.cpp/models/phi-3-mini-4k-instruct.Q4_K_M.gguf \
+  --host 127.0.0.1 --port 8091 \
+  -ngl 0 -c 4096 -t 8
+```
+
+### Current Status
+| Port | Model | Status | Mode |
+|------|-------|--------|------|
+| 8091 | Phi-3 Mini (general) | ✅ Running | CPU |
+| 8092 | Qwen2.5 7B (planner) | ✅ Running | CPU |
+| 8093 | DeepSeek Coder 6.7B | ✅ Running | GPU |
+| 8094 | Qwen2-VL (vision) | ❌ Not started | - |
+
+### Verified Working
+```bash
+curl http://localhost:8085/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
+# Returns valid response
+```
+
+### GPU Memory Issue
+RTX 3060 has 12GB VRAM. Current usage:
+- DeepSeek Coder: ~10GB (with -ngl 35)
+- Remaining: ~2GB (not enough for additional models)
+
+Running Phi-3 and Qwen2.5 on CPU as fallback.
+
+---
+
+**Status:** ✅ RESOLVED
