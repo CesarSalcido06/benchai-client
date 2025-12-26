@@ -19,6 +19,7 @@ return {
         timeout = 30000, -- 30 seconds to avoid hangs
         temperature = 0.7,
         max_tokens = 2048, -- Reduced to prevent infinite generation
+        stream = false, -- Server doesn't support SSE streaming properly
       },
 
       -- Behavior settings (auto_suggestions disabled to prevent hangs)
