@@ -18,7 +18,7 @@ return {
         model = "auto",
         timeout = 30000, -- 30 seconds to avoid hangs
         temperature = 0.7,
-        max_tokens = 4096,
+        max_tokens = 2048, -- Reduced to prevent infinite generation
       },
 
       -- Behavior settings (auto_suggestions disabled to prevent hangs)
