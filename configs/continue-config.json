@@ -1,0 +1,18 @@
+{
+  "models": [{
+    "title": "BenchAI",
+    "provider": "openai",
+    "model": "auto",
+    "apiKey": "not-needed",
+    "apiBase": "http://192.168.0.213:8085/v1",
+    "requestOptions": {"timeout": 120000}
+  }],
+  "tabAutocompleteModel": {
+    "title": "BenchAI Code",
+    "provider": "openai",
+    "model": "code",
+    "apiKey": "not-needed",
+    "apiBase": "http://192.168.0.213:8085/v1"
+  },
+  "allowAnonymousTelemetry": false
+}

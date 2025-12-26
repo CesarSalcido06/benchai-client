@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""
+BenchAI CLI - Command line interface for BenchAI router
+"""
+import requests
+import sys
+import argparse
+import os
+
+# Default URL - can be overridden with BENCHAI_URL environment variable
+BENCHAI_URL = os.environ.get("BENCHAI_URL", "http://192.168.0.213:8085")
+
+def chat(message, model="auto", stream=False):
+    """Send a chat message to BenchAI"""
+    try:
+        resp = requests.post(
+            f"{BENCHAI_URL}/v1/chat/completions",
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": message}],
+                "stream": stream
+            },
+            timeout=120
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.ConnectionError:
+        return f"Error: Cannot connect to BenchAI at {BENCHAI_URL}"
+    except requests.exceptions.Timeout:
+        return "Error: Request timed out"
+    except Exception as e:
+        return f"Error: {e}"
+
+def status():
+    """Check BenchAI health status"""
+    try:
+        resp = requests.get(f"{BENCHAI_URL}/health", timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        print(f"Status: {data.get('status', 'unknown')}")
+        print(f"Service: {data.get('service', 'unknown')}")
+        if 'features' in data:
+            print("Features:")
+            for k, v in data['features'].items():
+                print(f"  {k}: {'enabled' if v else 'disabled'}")
+        return True
+    except requests.exceptions.ConnectionError:
+        print(f"Error: Cannot connect to BenchAI at {BENCHAI_URL}")
+        return False
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
+
+def memory_stats():
+    """Get memory statistics"""
+    try:
+        resp = requests.get(f"{BENCHAI_URL}/v1/memory/stats", timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        print(f"Total memories: {data.get('total_memories', 0)}")
+        print(f"FTS5 enabled: {data.get('fts5_enabled', False)}")
+        if 'by_category' in data:
+            print("By category:")
+            for k, v in data['by_category'].items():
+                print(f"  {k}: {v}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+def search_memory(query):
+    """Search memories"""
+    try:
+        resp = requests.get(f"{BENCHAI_URL}/v1/memory/search", params={"q": query}, timeout=10)
+        resp.raise_for_status()
+        results = resp.json()
+        if not results:
+            print("No memories found")
+        else:
+            for r in results:
+                print(f"- {r.get('content', 'N/A')}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+def interactive_mode():
+    """Interactive chat mode"""
+    print(f"BenchAI Interactive Mode")
+    print(f"Connected to: {BENCHAI_URL}")
+    print("Type 'exit' or 'quit' to leave, 'status' to check health\n")
+
+    while True:
+        try:
+            query = input("You: ").strip()
+            if not query:
+                continue
+            if query.lower() in ["exit", "quit", "q"]:
+                print("Goodbye!")
+                break
+            if query.lower() == "status":
+                status()
+                continue
+
+            response = chat(query)
+            print(f"\nBenchAI: {response}\n")
+        except KeyboardInterrupt:
+            print("\nGoodbye!")
+            break
+        except EOFError:
+            break
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="BenchAI CLI - Your local AI assistant",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  benchai "what containers are running?"
+  benchai --status
+  benchai -i
+  benchai --memory-stats
+  benchai --search "dark mode"
+  BENCHAI_URL=http://192.168.1.100:8085 benchai "hello"
+        """
+    )
+    parser.add_argument("query", nargs="?", help="Query to send to BenchAI")
+    parser.add_argument("--status", "-s", action="store_true", help="Check BenchAI health status")
+    parser.add_argument("--interactive", "-i", action="store_true", help="Interactive chat mode")
+    parser.add_argument("--memory-stats", action="store_true", help="Show memory statistics")
+    parser.add_argument("--search", metavar="QUERY", help="Search memories")
+    parser.add_argument("--model", "-m", default="auto", help="Model to use (default: auto)")
+    parser.add_argument("--url", help="Override BenchAI URL")
+
+    args = parser.parse_args()
+
+    # Override URL if provided
+    global BENCHAI_URL
+    if args.url:
+        BENCHAI_URL = args.url
+
+    if args.status:
+        sys.exit(0 if status() else 1)
+    elif args.interactive:
+        interactive_mode()
+    elif args.memory_stats:
+        memory_stats()
+    elif args.search:
+        search_memory(args.search)
+    elif args.query:
+        print(chat(args.query, model=args.model))
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()
