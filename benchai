@@ -6,9 +6,25 @@ import requests
 import sys
 import argparse
 import os
+import json
 
 # Default URL - can be overridden with BENCHAI_URL environment variable
 BENCHAI_URL = os.environ.get("BENCHAI_URL", "http://192.168.0.213:8085")
+
+# Color codes for terminal output
+class Colors:
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+
+def colored(text, color):
+    """Return colored text if terminal supports it"""
+    if sys.stdout.isatty():
+        return f"{color}{text}{Colors.ENDC}"
+    return text
 
 def chat(message, model="auto", stream=False):
     """Send a chat message to BenchAI"""
@@ -20,16 +36,42 @@ def chat(message, model="auto", stream=False):
                 "messages": [{"role": "user", "content": message}],
                 "stream": stream
             },
-            timeout=120
+            timeout=120,
+            stream=stream
         )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+
+        if stream:
+            # Handle streaming response
+            content = ""
+            for line in resp.iter_lines():
+                if line:
+                    line = line.decode('utf-8')
+                    if line.startswith('data: '):
+                        data = line[6:]
+                        if data == '[DONE]':
+                            break
+                        try:
+                            chunk = json.loads(data)
+                            delta = chunk.get('choices', [{}])[0].get('delta', {})
+                            if 'content' in delta:
+                                content += delta['content']
+                                print(delta['content'], end='', flush=True)
+                        except json.JSONDecodeError:
+                            continue
+            print()  # New line at end
+            return content
+        else:
+            return resp.json()["choices"][0]["message"]["content"]
+
     except requests.exceptions.ConnectionError:
-        return f"Error: Cannot connect to BenchAI at {BENCHAI_URL}"
+        return colored(f"✗ Error: Cannot connect to BenchAI at {BENCHAI_URL}", Colors.RED)
     except requests.exceptions.Timeout:
-        return "Error: Request timed out"
+        return colored("✗ Error: Request timed out", Colors.RED)
+    except KeyError as e:
+        return colored(f"✗ Error: Unexpected response format - {e}", Colors.RED)
     except Exception as e:
-        return f"Error: {e}"
+        return colored(f"✗ Error: {e}", Colors.RED)
 
 def status():
     """Check BenchAI health status"""
@@ -37,18 +79,27 @@ def status():
         resp = requests.get(f"{BENCHAI_URL}/health", timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        print(f"Status: {data.get('status', 'unknown')}")
-        print(f"Service: {data.get('service', 'unknown')}")
+
+        status_text = data.get('status', 'unknown')
+        status_color = Colors.GREEN if status_text == 'healthy' else Colors.YELLOW
+
+        print(colored("BenchAI Status", Colors.BOLD))
+        print(f"Status:  {colored(status_text, status_color)}")
+        print(f"Service: {colored(data.get('service', 'unknown'), Colors.BLUE)}")
+        print(f"URL:     {colored(BENCHAI_URL, Colors.BLUE)}")
+
         if 'features' in data:
-            print("Features:")
+            print(colored("\nFeatures:", Colors.BOLD))
             for k, v in data['features'].items():
-                print(f"  {k}: {'enabled' if v else 'disabled'}")
+                status_icon = colored("✓", Colors.GREEN) if v else colored("✗", Colors.RED)
+                print(f"  {status_icon} {k}")
         return True
     except requests.exceptions.ConnectionError:
-        print(f"Error: Cannot connect to BenchAI at {BENCHAI_URL}")
+        print(colored(f"✗ Cannot connect to BenchAI at {BENCHAI_URL}", Colors.RED))
+        print(colored("  Make sure the server is running and you're on the same network", Colors.YELLOW))
         return False
     except Exception as e:
-        print(f"Error: {e}")
+        print(colored(f"✗ Error: {e}", Colors.RED))
         return False
 
 def memory_stats():
@@ -57,14 +108,18 @@ def memory_stats():
         resp = requests.get(f"{BENCHAI_URL}/v1/memory/stats", timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        print(f"Total memories: {data.get('total_memories', 0)}")
-        print(f"FTS5 enabled: {data.get('fts5_enabled', False)}")
-        if 'by_category' in data:
-            print("By category:")
+
+        print(colored("Memory Statistics", Colors.BOLD))
+        print(f"Total memories: {colored(str(data.get('total_memories', 0)), Colors.GREEN)}")
+        fts5_status = colored("✓ Enabled", Colors.GREEN) if data.get('fts5_enabled', False) else colored("✗ Disabled", Colors.RED)
+        print(f"FTS5 search:    {fts5_status}")
+
+        if 'by_category' in data and data['by_category']:
+            print(colored("\nBy Category:", Colors.BOLD))
             for k, v in data['by_category'].items():
-                print(f"  {k}: {v}")
+                print(f"  {colored(k, Colors.BLUE)}: {v}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(colored(f"✗ Error: {e}", Colors.RED))
 
 def search_memory(query):
     """Search memories"""
@@ -72,36 +127,59 @@ def search_memory(query):
         resp = requests.get(f"{BENCHAI_URL}/v1/memory/search", params={"q": query}, timeout=10)
         resp.raise_for_status()
         results = resp.json()
-        if not results:
-            print("No memories found")
-        else:
-            for r in results:
-                print(f"- {r.get('content', 'N/A')}")
-    except Exception as e:
-        print(f"Error: {e}")
 
-def interactive_mode():
+        if not results:
+            print(colored("No memories found", Colors.YELLOW))
+        else:
+            print(colored(f"Found {len(results)} memories:", Colors.GREEN))
+            for i, r in enumerate(results, 1):
+                category = r.get('category', 'general')
+                content = r.get('content', 'N/A')
+                print(f"\n{colored(f'[{i}]', Colors.BLUE)} {colored(category, Colors.YELLOW)}")
+                print(f"  {content}")
+    except Exception as e:
+        print(colored(f"✗ Error: {e}", Colors.RED))
+
+def interactive_mode(stream=False):
     """Interactive chat mode"""
-    print(f"BenchAI Interactive Mode")
-    print(f"Connected to: {BENCHAI_URL}")
-    print("Type 'exit' or 'quit' to leave, 'status' to check health\n")
+    print(colored("╔═══════════════════════════════════╗", Colors.BLUE))
+    print(colored("║   BenchAI Interactive Mode        ║", Colors.BLUE))
+    print(colored("╚═══════════════════════════════════╝", Colors.BLUE))
+    print(f"Connected to: {colored(BENCHAI_URL, Colors.GREEN)}")
+    print(f"Streaming: {colored('Enabled' if stream else 'Disabled', Colors.YELLOW)}")
+    print("\nCommands:")
+    print("  • Type your message to chat")
+    print("  • 'status' - Check server health")
+    print("  • 'stream' - Toggle streaming mode")
+    print("  • 'exit' or 'quit' - Leave chat\n")
 
     while True:
         try:
-            query = input("You: ").strip()
+            query = input(colored("You: ", Colors.GREEN)).strip()
             if not query:
                 continue
             if query.lower() in ["exit", "quit", "q"]:
-                print("Goodbye!")
+                print(colored("👋 Goodbye!", Colors.BLUE))
                 break
             if query.lower() == "status":
                 status()
+                print()
+                continue
+            if query.lower() == "stream":
+                stream = not stream
+                print(colored(f"Streaming {'enabled' if stream else 'disabled'}", Colors.YELLOW))
+                print()
                 continue
 
-            response = chat(query)
-            print(f"\nBenchAI: {response}\n")
+            print(colored("\nBenchAI: ", Colors.BLUE), end='')
+            if stream:
+                chat(query, stream=True)
+            else:
+                response = chat(query, stream=False)
+                print(response)
+            print()
         except KeyboardInterrupt:
-            print("\nGoodbye!")
+            print(colored("\n👋 Goodbye!", Colors.BLUE))
             break
         except EOFError:
             break
@@ -115,14 +193,24 @@ Examples:
   benchai "what containers are running?"
   benchai --status
   benchai -i
+  benchai -i --stream
   benchai --memory-stats
   benchai --search "dark mode"
+  benchai --stream "write a python function"
   BENCHAI_URL=http://192.168.1.100:8085 benchai "hello"
+
+Available Models:
+  auto      - Auto-select best model (default)
+  general   - General questions (Phi-3)
+  code      - Code generation (DeepSeek)
+  research  - Research/analysis (Qwen2.5)
+  vision    - Image analysis (Qwen2-VL)
         """
     )
     parser.add_argument("query", nargs="?", help="Query to send to BenchAI")
     parser.add_argument("--status", "-s", action="store_true", help="Check BenchAI health status")
     parser.add_argument("--interactive", "-i", action="store_true", help="Interactive chat mode")
+    parser.add_argument("--stream", action="store_true", help="Enable streaming responses")
     parser.add_argument("--memory-stats", action="store_true", help="Show memory statistics")
     parser.add_argument("--search", metavar="QUERY", help="Search memories")
     parser.add_argument("--model", "-m", default="auto", help="Model to use (default: auto)")
@@ -138,13 +226,18 @@ Examples:
     if args.status:
         sys.exit(0 if status() else 1)
     elif args.interactive:
-        interactive_mode()
+        interactive_mode(stream=args.stream)
     elif args.memory_stats:
         memory_stats()
     elif args.search:
         search_memory(args.search)
     elif args.query:
-        print(chat(args.query, model=args.model))
+        if args.stream:
+            print(colored("BenchAI: ", Colors.BLUE), end='')
+            chat(args.query, model=args.model, stream=True)
+        else:
+            response = chat(args.query, model=args.model, stream=False)
+            print(response)
     else:
         parser.print_help()
 

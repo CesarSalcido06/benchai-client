@@ -1,5 +1,6 @@
--- BenchAI Integration for Neovim/LazyVim
+-- BenchAI Integration for Neovim/LazyVim - FIXED VERSION
 -- Provides AI assistance using local BenchAI router
+-- This version uses a simpler, more reliable configuration
 
 return {
   -- Avante.nvim - Cursor-like AI experience
@@ -9,21 +10,21 @@ return {
     lazy = false,
     version = false,
     opts = {
-      -- Use OpenAI provider (most stable for custom endpoints)
+      -- Use OpenAI provider directly (simpler than custom vendor)
       provider = "openai",
       auto_suggestions_provider = "openai",
 
       openai = {
         endpoint = "http://192.168.0.213:8085/v1",
         model = "auto",
-        timeout = 30000, -- 30 seconds to avoid hangs
+        timeout = 30000, -- Reduced timeout to 30s
         temperature = 0.7,
         max_tokens = 4096,
       },
 
-      -- Behavior settings (auto_suggestions disabled to prevent hangs)
+      -- Behavior settings
       behaviour = {
-        auto_suggestions = false,
+        auto_suggestions = false, -- Disabled to prevent hangs
         auto_set_highlight_group = true,
         auto_set_keymaps = true,
         auto_apply_diff_after_generation = false,

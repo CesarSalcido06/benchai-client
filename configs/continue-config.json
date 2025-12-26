@@ -1,18 +1,64 @@
 {
-  "models": [{
-    "title": "BenchAI",
-    "provider": "openai",
-    "model": "auto",
-    "apiKey": "not-needed",
-    "apiBase": "http://192.168.0.213:8085/v1",
-    "requestOptions": {"timeout": 120000}
-  }],
+  "models": [
+    {
+      "title": "BenchAI Auto",
+      "provider": "openai",
+      "model": "auto",
+      "apiKey": "not-needed",
+      "apiBase": "http://192.168.0.213:8085/v1",
+      "requestOptions": {
+        "timeout": 120000,
+        "verifySsl": false
+      }
+    },
+    {
+      "title": "BenchAI Code",
+      "provider": "openai",
+      "model": "code",
+      "apiKey": "not-needed",
+      "apiBase": "http://192.168.0.213:8085/v1",
+      "requestOptions": {
+        "timeout": 120000,
+        "verifySsl": false
+      }
+    },
+    {
+      "title": "BenchAI Research",
+      "provider": "openai",
+      "model": "research",
+      "apiKey": "not-needed",
+      "apiBase": "http://192.168.0.213:8085/v1",
+      "requestOptions": {
+        "timeout": 120000,
+        "verifySsl": false
+      }
+    }
+  ],
   "tabAutocompleteModel": {
-    "title": "BenchAI Code",
+    "title": "BenchAI Code Autocomplete",
     "provider": "openai",
     "model": "code",
     "apiKey": "not-needed",
+    "apiBase": "http://192.168.0.213:8085/v1",
+    "requestOptions": {
+      "timeout": 30000,
+      "verifySsl": false
+    }
+  },
+  "embeddingsProvider": {
+    "provider": "openai",
+    "model": "auto",
+    "apiKey": "not-needed",
     "apiBase": "http://192.168.0.213:8085/v1"
   },
-  "allowAnonymousTelemetry": false
+  "allowAnonymousTelemetry": false,
+  "completionOptions": {
+    "maxTokens": 4096,
+    "temperature": 0.7
+  },
+  "tabAutocompleteOptions": {
+    "maxPromptTokens": 1024,
+    "debounceDelay": 500,
+    "maxSuffixPercentage": 0.5
+  }
 }

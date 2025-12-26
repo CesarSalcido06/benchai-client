@@ -1,129 +1,187 @@
-# BenchAI Client
+# BenchAI Client Tools
 
-Command-line tools and IDE integrations for BenchAI - your local AI engineering assistant.
+CLI, VS Code, and Neovim integrations for BenchAI.
 
 ## Quick Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/benchai-client.git
 cd benchai-client
 ./install.sh
 ```
 
-## What Gets Installed
-
-1. **CLI Tool** (`benchai`) - Terminal-based chat interface
-2. **VS Code** - Continue.dev configuration
-3. **Neovim** - Avante.nvim plugin configuration
+Installs:
+- **CLI tool** - `benchai` command with streaming support
+- **VS Code** - Continue.dev configuration
+- **Neovim** - Avante.nvim plugin setup
 
 ## Requirements
 
 - Python 3.8+
-- `requests` library (auto-installed)
-- Network access to BenchAI server (default: `192.168.0.213:8085`)
+- BenchAI server running and accessible
+- Default server: `http://192.168.0.213:8085`
 
 ## Configuration
 
-### Change Server URL
+### Custom Server URL
 
-Set the `BENCHAI_URL` environment variable before installing:
-
+**Before installation:**
 ```bash
 BENCHAI_URL=http://your-server:8085 ./install.sh
 ```
 
-Or set it permanently in your shell config:
-
+**Permanent (in shell config):**
 ```bash
 echo 'export BENCHAI_URL="http://your-server:8085"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**Per-command override:**
+```bash
+benchai --url http://localhost:8085 "your query"
 ```
 
 ## CLI Usage
 
+### Basic Commands
 ```bash
-# Check connection
+# Check server status
 benchai --status
 
-# Ask a question
-benchai "what containers are running?"
+# Simple query
+benchai "explain async/await in Python"
+
+# Streaming response
+benchai --stream "write a binary search function"
 
 # Interactive mode
 benchai -i
 
-# Use specific model
-benchai -m code "write a python function to sort a list"
-
-# Memory operations
-benchai --memory-stats
-benchai --search "dark mode"
-
-# Override URL for single command
-benchai --url http://192.168.1.100:8085 "hello"
+# Interactive with streaming
+benchai -i --stream
 ```
+
+### Model Selection
+```bash
+benchai -m general "what's the weather?"
+benchai -m code "write a quicksort implementation"
+benchai -m research "explain quantum computing"
+benchai -m vision "analyze this image"
+```
+
+### Memory Features
+```bash
+# View memory stats
+benchai --memory-stats
+
+# Search memories
+benchai --search "python preferences"
+```
+
+### Interactive Mode Commands
+When in `benchai -i`:
+- Type your message to chat
+- `status` - Check server health
+- `stream` - Toggle streaming on/off
+- `exit` or `quit` - Exit chat
 
 ## VS Code (Continue.dev)
 
-1. Install the [Continue](https://marketplace.visualstudio.com/items?itemName=Continue.continue) extension
-2. Config is auto-installed to `~/.continue/config.json`
-3. Press `Cmd+L` (Mac) or `Ctrl+L` (Linux/Windows) to open chat
+### Setup
+1. Install [Continue extension](https://marketplace.visualstudio.com/items?itemName=Continue.continue)
+2. Configuration auto-installed to `~/.continue/config.json`
+3. Restart VS Code
+
+### Usage
+- **Open chat**: `Cmd+L` (Mac) or `Ctrl+L` (Windows/Linux)
+- **Inline chat**: `Cmd+I` - Edit code inline
+- **Tab autocomplete**: Automatic code suggestions
+
+### Available Models in Continue
+- BenchAI Auto (default routing)
+- BenchAI Code (optimized for coding)
+- BenchAI Research (for analysis)
 
 ## Neovim (Avante.nvim)
 
-1. Plugin config installed to `~/.config/nvim/lua/plugins/benchai.lua`
-2. Run `:Lazy sync` in Neovim to install dependencies
-3. Keybindings:
-   - `<leader>aa` - Toggle AI chat sidebar
-   - Select code + `ga` - Add selection to chat
-   - `<CR>` - Submit in chat
-   - `<C-s>` - Submit in insert mode
+### Setup
+1. Config installed to `~/.config/nvim/lua/plugins/benchai.lua`
+2. Run `:Lazy sync` to install dependencies
+3. Restart Neovim
 
-## Available Models
+### Keybindings
+| Key | Action |
+|-----|--------|
+| `<leader>aa` | Toggle AI chat sidebar |
+| `ga` (visual mode) | Add selection to chat |
+| `<CR>` | Submit message (normal mode) |
+| `<C-s>` | Submit message (insert mode) |
+| `co` | Accept "ours" in diff |
+| `ct` | Accept "theirs" in diff |
+| `]]` | Jump to next change |
+| `[[` | Jump to previous change |
 
-| Model | Use Case |
-|-------|----------|
-| `auto` | Auto-selects best model (default) |
-| `general` | General questions (Phi-3 Mini) |
-| `code` | Code generation (DeepSeek 6.7B) |
-| `research` | Research/analysis (Qwen2.5 7B) |
-| `vision` | Image analysis (Qwen2-VL 7B) |
+## Models
 
-## API Endpoints
+All clients support these models:
 
-| Endpoint | Description |
-|----------|-------------|
-| `/health` | Health check |
-| `/v1/chat/completions` | Chat (OpenAI-compatible) |
-| `/v1/models` | List available models |
-| `/v1/memory/stats` | Memory statistics |
-| `/v1/memory/search?q=` | Search memories |
-| `/v1/rag/search?q=` | Search indexed documents |
+| Model | Use Case | Backend |
+|-------|----------|---------|
+| `auto` | Auto-routing (default) | Smart selection |
+| `general` | Quick answers | Phi-3 Mini |
+| `code` | Programming tasks | DeepSeek Coder |
+| `research` | Deep analysis | Qwen2.5 7B |
+| `vision` | Image understanding | Qwen2-VL |
 
 ## Troubleshooting
 
 ### Cannot connect to server
+```bash
+# Test connection
+curl http://192.168.0.213:8085/health
 
-1. Check if you're on the same network as the server
-2. If remote, ensure Twingate is connected
-3. Test with: `curl http://192.168.0.213:8085/health`
+# Check with CLI
+benchai --status
+```
+
+**Solutions:**
+- Verify BenchAI server is running
+- Ensure you're on the same network
+- Check firewall settings
+- Try `--url http://localhost:8085` if running locally
+
+### CLI command not found
+```bash
+# Check PATH
+echo $PATH | grep ".local/bin"
+
+# Add to PATH if missing
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+### VS Code Continue issues
+1. Verify extension is installed
+2. Check `~/.continue/config.json` exists
+3. Restart VS Code
+4. Check Output → Continue for errors
 
 ### Neovim plugin not loading
+```vim
+:checkhealth avante
+:Lazy sync
+:Lazy log
+```
 
-1. Ensure you're using LazyVim or lazy.nvim
-2. Run `:Lazy sync` to install dependencies
-3. Check `:Lazy` for any errors
+**Requirements:**
+- LazyVim or lazy.nvim plugin manager
+- Neovim 0.9+
 
-### VS Code Continue not working
-
-1. Ensure Continue extension is installed
-2. Restart VS Code after config changes
-3. Check Output panel for Continue logs
-
-## Files
+## Installed Files
 
 ```
-~/.local/bin/benchai          # CLI tool
-~/.continue/config.json       # VS Code Continue config
-~/.config/nvim/lua/plugins/benchai.lua  # Neovim plugin
+~/.local/bin/benchai                      # CLI executable
+~/.continue/config.json                   # VS Code config
+~/.config/nvim/lua/plugins/benchai.lua    # Neovim plugin
 ```
 
 ## Uninstall
@@ -133,3 +191,13 @@ rm ~/.local/bin/benchai
 rm ~/.continue/config.json
 rm ~/.config/nvim/lua/plugins/benchai.lua
 ```
+
+## Testing
+
+See [TESTING.md](TESTING.md) for comprehensive testing guide.
+
+## Support
+
+- **Server Issues**: See [benchai/docs/TROUBLESHOOTING.md](../benchai/docs/TROUBLESHOOTING.md)
+- **API Reference**: See [benchai/docs/API.md](../benchai/docs/API.md)
+- **Report Bugs**: Open an issue on GitHub

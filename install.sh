@@ -73,27 +73,74 @@ configure_continue() {
 
     cat > "$HOME/.continue/config.json" << EOF
 {
-  "models": [{
-    "title": "BenchAI",
-    "provider": "openai",
-    "model": "auto",
-    "apiKey": "not-needed",
-    "apiBase": "${BENCHAI_URL}/v1",
-    "requestOptions": {"timeout": 120000}
-  }],
+  "models": [
+    {
+      "title": "BenchAI Auto",
+      "provider": "openai",
+      "model": "auto",
+      "apiKey": "not-needed",
+      "apiBase": "${BENCHAI_URL}/v1",
+      "requestOptions": {
+        "timeout": 120000,
+        "verifySsl": false
+      }
+    },
+    {
+      "title": "BenchAI Code",
+      "provider": "openai",
+      "model": "code",
+      "apiKey": "not-needed",
+      "apiBase": "${BENCHAI_URL}/v1",
+      "requestOptions": {
+        "timeout": 120000,
+        "verifySsl": false
+      }
+    },
+    {
+      "title": "BenchAI Research",
+      "provider": "openai",
+      "model": "research",
+      "apiKey": "not-needed",
+      "apiBase": "${BENCHAI_URL}/v1",
+      "requestOptions": {
+        "timeout": 120000,
+        "verifySsl": false
+      }
+    }
+  ],
   "tabAutocompleteModel": {
-    "title": "BenchAI Code",
+    "title": "BenchAI Code Autocomplete",
     "provider": "openai",
     "model": "code",
     "apiKey": "not-needed",
+    "apiBase": "${BENCHAI_URL}/v1",
+    "requestOptions": {
+      "timeout": 30000,
+      "verifySsl": false
+    }
+  },
+  "embeddingsProvider": {
+    "provider": "openai",
+    "model": "auto",
+    "apiKey": "not-needed",
     "apiBase": "${BENCHAI_URL}/v1"
   },
-  "allowAnonymousTelemetry": false
+  "allowAnonymousTelemetry": false,
+  "completionOptions": {
+    "maxTokens": 4096,
+    "temperature": 0.7
+  },
+  "tabAutocompleteOptions": {
+    "maxPromptTokens": 1024,
+    "debounceDelay": 500,
+    "maxSuffixPercentage": 0.5
+  }
 }
 EOF
 
     echo "Continue.dev configured at ~/.continue/config.json"
-    echo "Note: Install the Continue extension in VS Code"
+    echo "Install the Continue extension: https://marketplace.visualstudio.com/items?itemName=Continue.continue"
+    echo "Press Cmd+L (Mac) or Ctrl+L (Linux/Windows) to start chatting"
 }
 
 # Function to configure Neovim
@@ -104,15 +151,19 @@ configure_neovim() {
 
     if [[ -d "$HOME/.config/nvim" ]]; then
         mkdir -p "$NVIM_PLUGIN_DIR"
-        cp "$SCRIPT_DIR/configs/benchai.lua" "$NVIM_PLUGIN_DIR/benchai.lua"
 
-        # Update the URL in the config
-        sed -i.bak "s|http://192.168.0.213:8085|${BENCHAI_URL}|g" "$NVIM_PLUGIN_DIR/benchai.lua" 2>/dev/null || \
-        sed -i '' "s|http://192.168.0.213:8085|${BENCHAI_URL}|g" "$NVIM_PLUGIN_DIR/benchai.lua"
-        rm -f "$NVIM_PLUGIN_DIR/benchai.lua.bak"
+        # Copy config and replace URL using portable method
+        if [[ "$OS" == "macos" ]]; then
+            # macOS requires empty string after -i
+            sed "s|http://192.168.0.213:8085|${BENCHAI_URL}|g" "$SCRIPT_DIR/configs/benchai.lua" > "$NVIM_PLUGIN_DIR/benchai.lua"
+        else
+            # Linux
+            sed "s|http://192.168.0.213:8085|${BENCHAI_URL}|g" "$SCRIPT_DIR/configs/benchai.lua" > "$NVIM_PLUGIN_DIR/benchai.lua"
+        fi
 
         echo "Neovim plugin installed to $NVIM_PLUGIN_DIR/benchai.lua"
         echo "Run :Lazy sync in Neovim to install dependencies"
+        echo "Use <leader>aa to open AI chat sidebar"
     else
         echo "Neovim config not found, skipping..."
         echo "To install later, copy configs/benchai.lua to ~/.config/nvim/lua/plugins/"
